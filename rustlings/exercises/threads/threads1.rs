@@ -12,7 +12,7 @@ use std::time::Duration;
 use std::sync::Mutex;
 
 fn main() {
-    let counter = Arc::new(Mutex::new(0)); // shared ownership of mutable int value 0 that can only be modified once at a time
+    let counter = Arc::new(Mutex::new(0)); 
     let status_shared = Arc::clone(&counter);
     thread::spawn(move || {
         for _ in 0..10 {

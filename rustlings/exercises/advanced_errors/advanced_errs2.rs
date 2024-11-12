@@ -16,8 +16,6 @@
 // 4. Complete the partial implementation of `Display` for
 //    `ParseClimateError`.
 
-// I AM NOT DONE
-
 use std::error::Error;
 use std::fmt::{self, Display, Formatter};
 use std::num::{ParseFloatError, ParseIntError};
@@ -34,11 +32,21 @@ enum ParseClimateError {
     ParseFloat(ParseFloatError),
 }
 
+impl Error for ParseClimateError {
+    fn source(&self) -> Option<&(dyn Error + 'static)> {
+        match self {
+            ParseClimateError::ParseInt(e) => Some(e),  
+            ParseClimateError::ParseFloat(e) => Some(e), 
+            _ => None,  
+        }
+    }
+}
+
 // This `From` implementation allows the `?` operator to work on
 // `ParseIntError` values.
 impl From<ParseIntError> for ParseClimateError {
     fn from(e: ParseIntError) -> Self {
-        Self::ParseInt(e)
+        return Self::ParseInt(e);
     }
 }
 
@@ -46,7 +54,7 @@ impl From<ParseIntError> for ParseClimateError {
 // `ParseFloatError` values.
 impl From<ParseFloatError> for ParseClimateError {
     fn from(e: ParseFloatError) -> Self {
-        // TODO: Complete this function
+        return Self::ParseFloat(e); 
     }
 }
 
@@ -59,11 +67,13 @@ impl Display for ParseClimateError {
     // TODO: Complete this function so that it produces the correct strings
     // for each error variant.
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        // Imports the variants to make the following code more compact.
         use ParseClimateError::*;
         match self {
+            Empty => write!(f, "empty input"),
+            BadLen => write!(f, "incorrect number of fields"),
             NoCity => write!(f, "no city name"),
-            ParseFloat(e) => write!(f, "error parsing temperature: {}", e),
+            ParseInt(_err) => write!(f, "error parsing year: {}", _err),
+            ParseFloat(_err) => write!(f, "error parsing temperature: {}", _err),
         }
     }
 }
@@ -88,14 +98,25 @@ impl FromStr for Climate {
     // TODO: Complete this function by making it handle the missing error
     // cases.
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let v: Vec<_> = s.split(',').collect();
+        let s_trimed = s.trim(); 
+        if s_trimed.is_empty() {
+            return Err(ParseClimateError::Empty);
+        }
+
+        let v: Vec<&str> = s.split(',').collect();
         let (city, year, temp) = match &v[..] {
             [city, year, temp] => (city.to_string(), year, temp),
             _ => return Err(ParseClimateError::BadLen),
         };
-        let year: u32 = year.parse()?;
-        let temp: f32 = temp.parse()?;
-        Ok(Climate { city, year, temp })
+
+        if city.is_empty() {
+            return Err(ParseClimateError::NoCity);
+        }
+
+        let year: u32 = year.parse().map_err(|_err| ParseClimateError::from(_err))?;
+        let temp: f32 = temp.parse().map_err(|_err| ParseClimateError::from(_err))?;
+        
+        return Ok(Climate { city, year, temp });
     }
 }
 
